@@ -2,6 +2,8 @@ import socket
 import json
 import sys
 
+sys.stdout.reconfigure(encoding='utf-8')
+
 photo = sys.argv[1]
 
 data = {

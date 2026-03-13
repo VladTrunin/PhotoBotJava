@@ -7,6 +7,7 @@ import sys
 
 MODEL_PATH = sys.argv[1]
 PROMPT_TEXT = sys.argv[2]
+OFFLOAD_FOLDER = sys.argv[3]
 
 sys.stdout.reconfigure(encoding='utf-8')
 print("Загрузка модели...")
@@ -22,7 +23,7 @@ model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
     MODEL_PATH,
     quantization_config=bnb_config,
     device_map="auto",
-    offload_folder="I:/AI/QWEN/offload_temp",
+    offload_folder=OFFLOAD_FOLDER,
     local_files_only=True
 )
 
@@ -30,7 +31,7 @@ model.eval()
 
 print("Модель загружена")
 
-def classify(image_path, prompt):
+def classify(image_path):
 
     image = Image.open(image_path).convert("RGB")
 
@@ -38,7 +39,7 @@ def classify(image_path, prompt):
         "role": "user",
         "content": [
             {"type": "image", "image": image},
-            {"type": "text", "text": prompt}
+            {"type": "text", "text": PROMPT_TEXT}
         ]
     }]
 
@@ -50,7 +51,7 @@ def classify(image_path, prompt):
 
     inputs = processor(
         text=[text],
-        images=[image],
+        images=image,
         return_tensors="pt"
     ).to(model.device)
 
@@ -97,8 +98,8 @@ while True:
 
     photo = request["photo"]
 
-    result = classify(photo, PROMPT_TEXT)
+    result = classify(photo)
 
-    conn.send(result.encode())
+    conn.send(result.encode("utf-8"))
 
     conn.close()

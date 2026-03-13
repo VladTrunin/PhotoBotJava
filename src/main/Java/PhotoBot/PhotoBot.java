@@ -20,12 +20,7 @@ import java.util.regex.Pattern;
 
 public class PhotoBot {
 
-    private static final String BOT_TOKEN;
-    private static final String INPUT_FOLDER;
-    private static final String EXCEL_PATH;
-    private static final String PYTHON;
-    private static final String MODEL_PATH;
-    private static final String PROMPT_TEXT;
+    private static final String BOT_TOKEN, INPUT_FOLDER, EXCEL_PATH, PYTHON, MODEL_PATH, PROMPT_TEXT, OFFLOAD_FOLDER, PROCESSED_FOLDER;
     private static String currentDate = null;
     private static long currentChatId = 0;
     private static int photoCountForDate = 0;
@@ -42,7 +37,7 @@ public class PhotoBot {
                 .getResourceAsStream("config.properties")) {
 
             Properties p = new Properties();
-            p.load(in);
+            p.load(new InputStreamReader(in, StandardCharsets.UTF_8));
 
             BOT_TOKEN = p.getProperty("bot.token");
             INPUT_FOLDER = p.getProperty("input.folder");
@@ -50,6 +45,8 @@ public class PhotoBot {
             PYTHON = p.getProperty("python");
             PROMPT_TEXT = p.getProperty("prompt.text");
             MODEL_PATH = p.getProperty("model.path");
+            OFFLOAD_FOLDER = p.getProperty("offload.folder");
+            PROCESSED_FOLDER = p.getProperty("processed.folder");
 
             initExcel();
 
@@ -64,9 +61,8 @@ public class PhotoBot {
 
     public static void main(String[] args) throws Exception {
 
-
         // запуск Python AI сервера
-        ProcessBuilder pbModel = new ProcessBuilder(PYTHON, MODEL_SERVER, MODEL_PATH, PROMPT_TEXT);
+        ProcessBuilder pbModel = new ProcessBuilder(PYTHON, MODEL_SERVER, MODEL_PATH, PROMPT_TEXT, OFFLOAD_FOLDER);
         pbModel.redirectErrorStream(true); // объединяем stdout и stderr
         modelProcess = pbModel.start();
 
@@ -196,6 +192,9 @@ public class PhotoBot {
 
             row.createCell(1).setCellValue(result);
 
+            // перенос фото в обработанное
+            moveToProcessed(target);
+
             System.out.println("💾 " + baseName + " → " + result);
 
         } catch (Exception e) {
@@ -280,7 +279,7 @@ public class PhotoBot {
                 byte[] buffer = new byte[1024];
                 int len = in.read(buffer);
 
-                String response = new String(buffer, 0, len);
+                String response = new String(buffer, 0, len, StandardCharsets.UTF_8);
 
                 if ("READY".equals(response)) {
                     System.out.println("🤖 AI сервер готов");
@@ -309,6 +308,23 @@ public class PhotoBot {
             return Paths.get(url.toURI()).toString();
         } catch (Exception e) {
             throw new RuntimeException("Resource not found: " + resource, e);
+        }
+    }
+    private static void moveToProcessed(Path file) {
+
+        try {
+
+            Path processedDir = Paths.get(PROCESSED_FOLDER);
+
+            Files.createDirectories(processedDir);
+
+            Path target = processedDir.resolve(file.getFileName());
+
+            Files.move(file, target, StandardCopyOption.REPLACE_EXISTING);
+
+        } catch (Exception e) {
+
+            System.err.println("❌ Перенос файла: " + e.getMessage());
         }
     }
 }
