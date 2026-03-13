@@ -3,6 +3,15 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 
+# Python virtual env
+bot_python_env/
+venv/
+.env/
+
+# Python cache
+__pycache__/
+*.pyc
+
 src/main/resources/archetype-resources/
 src/main/resources/META-INF
 # secrets
